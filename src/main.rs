@@ -2,6 +2,9 @@ mod interceptor;
 mod gaslighter;
 mod logger;
 mod http_decoy;
+mod entropy;
+mod profiler;
+mod dashboard;
 
 use logger::{SessionLogger, SharedLogger};
 use std::sync::{Arc, Mutex};
@@ -28,7 +31,17 @@ async fn main() {
     let output = gaslighter::jit_compiler::execute("ls -la /etc/shadow", &logger);
     println!("[gaslighter::jit_compiler]\n{output}");
 
+    let keygen_output = gaslighter::jit_compiler::execute("ssh-keygen -t rsa -f /root/.ssh/id_rsa", &logger);
+    println!("[gaslighter::jit_compiler]\n{keygen_output}");
+
     println!("Ghostglass Layer 2 active — session logging + HTTP decoy online");
+
+    let log_path = logger.lock().unwrap().path().to_string();
+    let profile = profiler::profile_session(&log_path);
+    profiler::print_profile(&profile);
+    dashboard::print_dashboard(&logger, &profile);
+
+    println!("Ghostglass Layer 3 active — attacker intelligence online");
     println!("[ghostglass] Demos complete. TLS proxy listening on 127.0.0.1:8443 — press Ctrl+C to exit.");
     let _ = tokio::join!(proxy, decoy);
 }

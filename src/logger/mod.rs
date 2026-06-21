@@ -1,13 +1,16 @@
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
 use std::sync::{Arc, Mutex};
-use std::time::{SystemTime, UNIX_EPOCH};
+use std::time::{Duration, Instant, SystemTime, UNIX_EPOCH};
 
 /// Shared handle used by every module that needs to record attacker activity.
 pub type SharedLogger = Arc<Mutex<SessionLogger>>;
 
 pub struct SessionLogger {
     file: File,
+    path: String,
+    started_at: Instant,
+    connections: u32,
 }
 
 impl SessionLogger {
@@ -18,7 +21,19 @@ impl SessionLogger {
         let path = format!("logs/session_{started}.log");
         let file = OpenOptions::new().create(true).append(true).open(&path)?;
         println!("[logger] Session log opened at {path}");
-        Ok(Self { file })
+        Ok(Self { file, path, started_at: Instant::now(), connections: 0 })
+    }
+
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+
+    pub fn connection_count(&self) -> u32 {
+        self.connections
+    }
+
+    pub fn uptime(&self) -> Duration {
+        self.started_at.elapsed()
     }
 
     fn timestamp() -> String {
@@ -44,12 +59,14 @@ impl SessionLogger {
     }
 
     pub fn log_connection(&mut self, peer: &str, sni: &str) {
+        self.connections += 1;
         let line = format!("[{}] NEW CONNECTION peer={peer} sni={sni}", Self::timestamp());
         println!("{line}");
         self.write_line(&line);
     }
 
     pub fn log_http_hit(&mut self, peer: &str, path: &str) {
+        self.connections += 1;
         let line = format!("[{}] HTTP HIT peer={peer} path={path}", Self::timestamp());
         println!("{line}");
         self.write_line(&line);

@@ -1,4 +1,5 @@
 use super::procedural_fs;
+use crate::entropy;
 use crate::logger::SharedLogger;
 use rand::Rng;
 
@@ -38,6 +39,11 @@ fn route(cmd: &str, logger: &SharedLogger) -> String {
         }
         "ps" => return fake_processes(),
         "ls" => return fake_ls(cmd, logger),
+        "openssl" | "gpg" | "ssh-keygen" | "ssh-copy-id" => {
+            if let Some(resp) = entropy::inject_entropy_response(cmd) {
+                return resp;
+            }
+        }
         _ => {}
     }
 
