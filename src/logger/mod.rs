@@ -1,3 +1,5 @@
+use crate::alerts::AlertConfig;
+use crate::profiler::{self, SkillLevel};
 use serde::Serialize;
 use std::fs::{self, File, OpenOptions};
 use std::io::Write;
@@ -28,11 +30,13 @@ pub struct SessionLogger {
     http_hit_count: u32,
     commands_run: Vec<String>,
     honeytoken_hits: Vec<String>,
+    alert_config: Option<AlertConfig>,
+    apt_alerted: bool,
 }
 
 impl SessionLogger {
     /// Opens a fresh `logs/session_<timestamp>.log` file for this run.
-    pub fn new() -> std::io::Result<Self> {
+    pub fn new(alert_config: Option<AlertConfig>) -> std::io::Result<Self> {
         fs::create_dir_all("logs")?;
         let started = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default().as_secs();
         let path = format!("logs/session_{started}.log");
@@ -47,7 +51,13 @@ impl SessionLogger {
             http_hit_count: 0,
             commands_run: Vec::new(),
             honeytoken_hits: Vec::new(),
+            alert_config,
+            apt_alerted: false,
         })
+    }
+
+    fn session_id(&self) -> String {
+        profiler::session_id_from_path(&self.path)
     }
 
     pub fn path(&self) -> &str {
@@ -94,6 +104,19 @@ impl SessionLogger {
         let line = format!("[{}] COMMAND: {cmd}\n{output}", Self::timestamp());
         println!("{line}");
         self.write_line(&line);
+
+        if !self.apt_alerted {
+            let skill = profiler::assess_skill(&self.commands_run, &self.honeytoken_hits);
+            if skill == SkillLevel::Apt {
+                self.apt_alerted = true;
+                if let Some(config) = self.alert_config.clone() {
+                    let session_id = self.session_id();
+                    tokio::spawn(async move {
+                        config.send_apt_alert(&session_id).await;
+                    });
+                }
+            }
+        }
     }
 
     pub fn log_honeytoken(&mut self, file: &str) {
@@ -101,6 +124,15 @@ impl SessionLogger {
         let line = format!("[{}] HONEYTOKEN TRIGGERED: {file}", Self::timestamp());
         println!("[ALERT] {line}");
         self.write_line(&format!("[ALERT] {line}"));
+
+        if let Some(config) = self.alert_config.clone() {
+            let skill = profiler::assess_skill(&self.commands_run, &self.honeytoken_hits).to_string();
+            let session_id = self.session_id();
+            let file = file.to_string();
+            tokio::spawn(async move {
+                config.send_honeytoken_alert(&file, &skill, &session_id).await;
+            });
+        }
     }
 
     pub fn log_connection(&mut self, peer: &str, sni: &str) {

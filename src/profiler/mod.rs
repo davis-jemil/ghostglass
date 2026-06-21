@@ -80,7 +80,7 @@ pub fn assess_skill(commands: &[String], honeytoken_hits: &[String]) -> SkillLev
     }
 }
 
-fn session_id_from_path(log_file: &str) -> String {
+pub fn session_id_from_path(log_file: &str) -> String {
     Path::new(log_file)
         .file_stem()
         .map(|s| s.to_string_lossy().to_string())

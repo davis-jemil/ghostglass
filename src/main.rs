@@ -6,6 +6,7 @@ mod entropy;
 mod profiler;
 mod dashboard;
 mod web;
+mod alerts;
 
 use logger::{SessionLogger, SharedLogger};
 use std::sync::{Arc, Mutex};
@@ -14,8 +15,14 @@ use std::sync::{Arc, Mutex};
 async fn main() {
     println!("Ghostglass Protocol initializing...");
 
+    let alert_config = alerts::AlertConfig::load();
+    match &alert_config {
+        Some(_) => println!("Ghostglass Layer 5 active — real-time alerts enabled"),
+        None => println!("Ghostglass Layer 5 — alerts disabled (no config/alerts.toml)"),
+    }
+
     let logger: SharedLogger = Arc::new(Mutex::new(
-        SessionLogger::new().expect("failed to initialize session logger"),
+        SessionLogger::new(alert_config).expect("failed to initialize session logger"),
     ));
 
     let proxy = tokio::spawn(interceptor::handshake::start_proxy("127.0.0.1:8443", logger.clone()));
