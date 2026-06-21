@@ -1,8 +1,11 @@
+use crate::logger::SharedLogger;
 use rand::rngs::StdRng;
 use rand::{Rng, SeedableRng};
 use std::collections::hash_map::DefaultHasher;
 use std::collections::HashSet;
 use std::hash::{Hash, Hasher};
+
+const HONEYTOKEN_PATH_PATTERNS: &[&str] = &["secrets", "certs", "private"];
 
 pub struct FakeEntry {
     pub name: String,
@@ -116,7 +119,13 @@ fn push_juicy(rng: &mut StdRng, prefix: &str, out: &mut Vec<FakeEntry>) {
 /// path stay consistent. Each call surfaces two levels of nesting; descending
 /// into one of the returned subdirectories and listing it again seeds a fresh,
 /// equally consistent tree underneath it — the "infinite hallway" never ends.
-pub fn list_directory(path: &str) -> Vec<FakeEntry> {
+pub fn list_directory(path: &str, logger: &SharedLogger) -> Vec<FakeEntry> {
+    if HONEYTOKEN_PATH_PATTERNS.iter().any(|p| path.contains(p)) {
+        if let Ok(mut log) = logger.lock() {
+            log.log_honeytoken(path);
+        }
+    }
+
     let mut rng = StdRng::seed_from_u64(seed_from_path(path));
     let clean = path.trim_end_matches('/');
     let mut entries = Vec::new();

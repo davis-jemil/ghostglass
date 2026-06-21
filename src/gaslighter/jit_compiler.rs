@@ -1,14 +1,33 @@
 use super::procedural_fs;
+use crate::logger::SharedLogger;
 use rand::Rng;
+
+const HONEYTOKEN_PATTERNS: &[&str] = &[".env", ".key", "id_rsa", "credentials", "shadow", "passwd"];
+
+fn honeytoken_target(cmd: &str) -> Option<&str> {
+    cmd.split_whitespace()
+        .find(|tok| HONEYTOKEN_PATTERNS.iter().any(|p| tok.contains(p)))
+}
 
 /// "Executes" an attacker-supplied shell command against the gaslighter, returning
 /// fabricated output convincing enough to keep them digging instead of bailing out.
-pub fn execute(command: &str) -> String {
+pub fn execute(command: &str, logger: &SharedLogger) -> String {
     let cmd = command.trim();
-    format!("$ {command}\n{}", route(cmd))
+    let output = route(cmd, logger);
+
+    if let Ok(mut log) = logger.lock() {
+        log.log_command(cmd, &output);
+    }
+    if let Some(target) = honeytoken_target(cmd) {
+        if let Ok(mut log) = logger.lock() {
+            log.log_honeytoken(target);
+        }
+    }
+
+    format!("$ {command}\n{output}")
 }
 
-fn route(cmd: &str) -> String {
+fn route(cmd: &str, logger: &SharedLogger) -> String {
     let first = cmd.split_whitespace().next().unwrap_or("");
 
     match first {
@@ -18,7 +37,7 @@ fn route(cmd: &str) -> String {
             return fake_network();
         }
         "ps" => return fake_processes(),
-        "ls" => return fake_ls(cmd),
+        "ls" => return fake_ls(cmd, logger),
         _ => {}
     }
 
@@ -32,7 +51,7 @@ fn route(cmd: &str) -> String {
     fake_generic(cmd)
 }
 
-fn fake_ls(cmd: &str) -> String {
+fn fake_ls(cmd: &str, logger: &SharedLogger) -> String {
     let target = cmd
         .split_whitespace()
         .skip(1)
@@ -49,7 +68,7 @@ fn fake_ls(cmd: &str) -> String {
     let clean_target = target.trim_end_matches('/');
     let prefix = format!("{clean_target}/");
 
-    let rows: Vec<String> = procedural_fs::list_directory(target)
+    let rows: Vec<String> = procedural_fs::list_directory(target, logger)
         .into_iter()
         .filter_map(|e| {
             let rel = e.name.strip_prefix(&prefix)?;
