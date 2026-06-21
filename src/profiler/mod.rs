@@ -41,7 +41,7 @@ fn command_target(cmd: &str) -> Option<&str> {
 /// is approximated within a single log by combining honeytoken breadth with
 /// evidence of systematic traversal, since cross-session correlation isn't
 /// tracked yet.
-fn assess_skill(commands: &[String], honeytoken_hits: &[String]) -> SkillLevel {
+pub fn assess_skill(commands: &[String], honeytoken_hits: &[String]) -> SkillLevel {
     let lower: Vec<String> = commands.iter().map(|c| c.to_lowercase()).collect();
 
     let priv_esc = lower.iter().any(|c| {

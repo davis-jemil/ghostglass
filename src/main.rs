@@ -5,6 +5,7 @@ mod http_decoy;
 mod entropy;
 mod profiler;
 mod dashboard;
+mod web;
 
 use logger::{SessionLogger, SharedLogger};
 use std::sync::{Arc, Mutex};
@@ -19,6 +20,7 @@ async fn main() {
 
     let proxy = tokio::spawn(interceptor::handshake::start_proxy("127.0.0.1:8443", logger.clone()));
     let decoy = tokio::spawn(http_decoy::start_decoy("127.0.0.1:8080", logger.clone()));
+    let web_dashboard = tokio::spawn(web::start_dashboard("127.0.0.1:3000", logger.clone()));
 
     interceptor::pqc_adaptor::evaluate();
 
@@ -42,6 +44,7 @@ async fn main() {
     dashboard::print_dashboard(&logger, &profile);
 
     println!("Ghostglass Layer 3 active — attacker intelligence online");
+    println!("Ghostglass Layer 4 active — web dashboard at http://127.0.0.1:3000");
     println!("[ghostglass] Demos complete. TLS proxy listening on 127.0.0.1:8443 — press Ctrl+C to exit.");
-    let _ = tokio::join!(proxy, decoy);
+    let _ = tokio::join!(proxy, decoy, web_dashboard);
 }
