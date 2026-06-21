@@ -7,30 +7,33 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
 <head>
 <meta charset="UTF-8">
 <title>GHOSTGLASS COMMAND CENTER</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #050806;
-    --panel: #0c120f;
-    --green: #00ff66;
-    --dim-green: #0a3d22;
-    --red: #ff3344;
-    --grey: #888888;
-    --yellow: #e6c200;
-    --orange: #ff8800;
+    --bg: #FFFFFF;
+    --panel: #F5F5F5;
+    --primary: #00AEEF;
+    --text: #1A1A1A;
+    --red: #D32F2F;
+    --grey: #6B6B6B;
+    --orange: #FF8800;
   }
   * { box-sizing: border-box; }
   body {
     background: var(--bg);
-    color: var(--green);
-    font-family: "Courier New", monospace;
+    color: var(--text);
+    font-family: "Inter", "Segoe UI", sans-serif;
     margin: 0;
     padding: 24px;
   }
   h1 {
     text-align: center;
-    letter-spacing: 4px;
-    text-shadow: 0 0 8px var(--green);
-    border-bottom: 1px solid var(--dim-green);
+    letter-spacing: 2px;
+    color: var(--text);
+    font-weight: 800;
+    border-bottom: 3px solid var(--primary);
     padding-bottom: 16px;
   }
   .grid {
@@ -41,18 +44,21 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
   }
   .card {
     background: var(--panel);
-    border: 1px solid var(--dim-green);
+    border-left: 4px solid var(--primary);
     border-radius: 6px;
     padding: 16px;
   }
   .card .label {
     color: var(--grey);
     font-size: 12px;
+    font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 2px;
   }
   .card .value {
+    color: var(--primary);
     font-size: 28px;
+    font-weight: 700;
     margin-top: 8px;
   }
   .panels {
@@ -63,7 +69,7 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
   }
   .panel {
     background: var(--panel);
-    border: 1px solid var(--dim-green);
+    border-left: 4px solid var(--primary);
     border-radius: 6px;
     padding: 16px;
     min-height: 220px;
@@ -71,6 +77,7 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
   .panel h2 {
     margin: 0 0 12px 0;
     font-size: 14px;
+    font-weight: 700;
     letter-spacing: 2px;
     color: var(--grey);
   }
@@ -79,30 +86,33 @@ const DASHBOARD_HTML: &str = r#"<!DOCTYPE html>
     margin: 0;
     padding: 0;
     color: var(--red);
+    font-weight: 700;
   }
   #honeytoken-list li {
     padding: 6px 0;
-    border-bottom: 1px dashed #311111;
+    border-bottom: 1px dashed #E0B4B4;
   }
   #honeytoken-list li::before {
     content: "[!] ";
   }
   #terminal {
-    background: #000000;
+    background: #1A1A1A;
+    color: #FFFFFF;
     border-radius: 4px;
     padding: 12px;
     height: 200px;
     overflow-y: auto;
+    font-family: "Courier New", monospace;
     font-size: 13px;
   }
   #terminal div::before {
     content: "$ ";
-    color: var(--grey);
+    color: #999999;
   }
-  .skill-Script-Kiddie { color: var(--grey); }
-  .skill-Intermediate { color: var(--yellow); }
-  .skill-Advanced { color: var(--orange); }
-  .skill-APT {
+  #skill-assessment.skill-Script-Kiddie { color: var(--grey); }
+  #skill-assessment.skill-Intermediate { color: var(--primary); }
+  #skill-assessment.skill-Advanced { color: var(--orange); }
+  #skill-assessment.skill-APT {
     color: var(--red);
     animation: pulse 1s infinite;
   }
