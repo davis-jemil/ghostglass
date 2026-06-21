@@ -1,15 +1,52 @@
+use rand::Rng;
+use std::time::{SystemTime, UNIX_EPOCH};
 use tokio::net::TcpListener;
+
+const FAKE_SNI_POOL: &[&str] = &[
+    "ghostglass.internal",
+    "api.internal.corp",
+    "vault.internal.corp",
+    "auth.svc.cluster.local",
+    "db-primary.internal",
+];
 
 pub async fn start_proxy(addr: &str) {
     println!("[interceptor::handshake] Binding mock TLS proxy on {addr}");
-    match TcpListener::bind(addr).await {
-        Ok(_listener) => {
-            println!("[interceptor::handshake] Socket open — ClientHello parser armed");
-            println!("[interceptor::handshake] ClientHello (mock): TLSv1.3 SNI=ghostglass.internal cipher=TLS_AES_256_GCM_SHA384");
-        }
+
+    let listener = match TcpListener::bind(addr).await {
+        Ok(listener) => listener,
         Err(e) => {
             println!("[interceptor::handshake] Bind failed ({e}); falling back to mock mode");
-            println!("[interceptor::handshake] ClientHello (mock): TLSv1.3 SNI=ghostglass.internal cipher=TLS_AES_256_GCM_SHA384");
+            log_handshake("0.0.0.0:0");
+            return;
+        }
+    };
+
+    println!("[interceptor::handshake] Socket open — ClientHello parser armed on {addr}");
+
+    loop {
+        match listener.accept().await {
+            Ok((_socket, peer)) => {
+                log_handshake(&peer.to_string());
+            }
+            Err(e) => {
+                println!("[interceptor::handshake] accept() failed: {e}");
+            }
         }
     }
+}
+
+fn fake_sni() -> &'static str {
+    let mut rng = rand::thread_rng();
+    FAKE_SNI_POOL[rng.gen_range(0..FAKE_SNI_POOL.len())]
+}
+
+fn log_handshake(peer: &str) {
+    let now = SystemTime::now().duration_since(UNIX_EPOCH).unwrap_or_default();
+    println!(
+        "[interceptor::handshake] t={}.{:03} peer={peer} ClientHello (mock): TLSv1.3 SNI={} cipher=TLS_AES_256_GCM_SHA384",
+        now.as_secs(),
+        now.as_millis() % 1000,
+        fake_sni(),
+    );
 }

@@ -5,7 +5,7 @@ mod gaslighter;
 async fn main() {
     println!("Ghostglass Protocol initializing...");
 
-    interceptor::handshake::start_proxy("127.0.0.1:8443").await;
+    let proxy = tokio::spawn(interceptor::handshake::start_proxy("127.0.0.1:8443"));
 
     interceptor::pqc_adaptor::evaluate();
 
@@ -17,4 +17,7 @@ async fn main() {
 
     let output = gaslighter::jit_compiler::execute("ls -la /etc/shadow");
     println!("[gaslighter::jit_compiler]\n{output}");
+
+    println!("[ghostglass] Demos complete. TLS proxy listening on 127.0.0.1:8443 — press Ctrl+C to exit.");
+    let _ = proxy.await;
 }
